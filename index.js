@@ -328,7 +328,6 @@ var parseMaterials = function () {
 
 	});
 
-
 	// iterate over each file (material)
 	files.forEach(function (file) {
 
@@ -385,13 +384,13 @@ var parseMaterials = function () {
 
 	});
 
-
 	// sort materials object alphabetically
 	assembly.materials = sortObj(assembly.materials, 'order');
 
 	for (var collection in assembly.materials) {
 		assembly.materials[collection].items = sortObj(assembly.materials[collection].items, 'order');
 	}
+
 
 };
 
@@ -523,7 +522,6 @@ var parseViews = function () {
 		}
 
 	});
-
 };
 
 
@@ -636,6 +634,10 @@ var assemble = function () {
 		// get page gray matter and content
 		var pageMatter = getMatter(file),
 			pageContent = pageMatter.content;
+
+		if (options.autoFabricator && file.match(options.autoFabricator)) {
+			pageMatter.data.fabricator = true;
+		}
 
 		if (collection) {
 			pageMatter.data.baseurl = '..';
