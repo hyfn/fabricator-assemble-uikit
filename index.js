@@ -274,8 +274,9 @@ var toTitleCase = function(str) {
  * @param  {String} layout
  * @return {String}
  */
-var wrapPage = function (page, layout) {
-	return layout.replace(/\{\%\s?body\s?\%\}/, page);
+var wrapPage = function (page, layout, innerContent) {
+  var content = innerContent ? innerContent.replace(/\{\%\s?body\s?\%\}/g, page) : page;
+	return layout.replace(/\{\%\s?body\s?\%\}/, content);
 };
 
 
@@ -623,8 +624,8 @@ var assemble = function () {
 
 	// iterate over each view
 	files.forEach(function (file) {
-
-		var id = getName(file);
+    var innerContent, innerMatter;
+    var id = getName(file);
 
 		// build filePath
 		var dirname = path.normalize(path.dirname(file)).split(path.sep).pop(),
@@ -633,10 +634,18 @@ var assemble = function () {
 
 		// get page gray matter and content
 		var pageMatter = getMatter(file),
-			pageContent = pageMatter.content;
+      pageContent = pageMatter.content;
 
 		if (options.autoFabricator && file.match(options.autoFabricator)) {
-			pageMatter.data.fabricator = true;
+      innerMatter = getMatter(options.moduleWrapper)
+      innerContent = innerMatter.content;
+
+      // TODO: lets define a clean way to capture the data we need
+      pageMatter.data.fabricator = true;
+      pageMatter.data.module_name = id;
+      pageMatter.data.module_path = filePath;
+      pageMatter.data.source = pageContent;
+      pageMatter.data.collection = collection;
 		}
 
 		if (collection) {
@@ -644,7 +653,7 @@ var assemble = function () {
 		}
 
 		// template using Handlebars
-		var source = wrapPage(pageContent, assembly.layouts[pageMatter.data.layout || options.layout]),
+		var source = wrapPage(pageContent, assembly.layouts[pageMatter.data.layout || options.layout], innerContent),
 			context = buildContext(pageMatter.data),
 			template = Handlebars.compile(source);
 
