@@ -644,7 +644,7 @@ var assemble = function () {
       pageMatter.data.fabricator = true;
       pageMatter.data.module_name = id;
       pageMatter.data.module_path = filePath;
-      pageMatter.data.source = pageContent;
+      pageMatter.data.module_source = pageContent;
       pageMatter.data.collection = collection;
 		}
 
