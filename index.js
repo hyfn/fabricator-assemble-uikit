@@ -640,12 +640,16 @@ var assemble = function () {
       innerMatter = getMatter(options.moduleWrapper)
       innerContent = innerMatter.content;
 
-      // TODO: lets define a clean way to capture the data we need
       pageMatter.data.fabricator = true;
       pageMatter.data.module_name = id;
+      pageMatter.data.module_slug = id ? id.replace(/\s+/g, '-') : id;
       pageMatter.data.module_path = filePath;
       pageMatter.data.module_source = pageContent;
       pageMatter.data.collection = collection;
+
+      if (options.moduleAssemble) {
+        pageMatter.data.assemble = options.moduleAssemble( { name: id, path: path.dirname(file) });
+      }
 		}
 
 		if (collection) {
