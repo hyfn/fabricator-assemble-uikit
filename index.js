@@ -405,15 +405,30 @@ var setup = function (userOptions) {
   var src = options.src.slice()
   src.push({ autoescape: true })
 
-  nunjucks.configure.apply(null, src)
+  var env = nunjucks.configure.apply(null, src)
 
-	// setup steps
+  // setup steps
+  setupCustomTags(env);
+  setupCustomFunctions(env);
 	parseLayouts();
 	parseData();
 	parseViews();
 	parseDocs();
 };
 
+var setupCustomTags = function(env) {
+  var customTags = [ ...options.customTags ];
+  customTags.forEach(function(c) {
+    env.addExtension(c.key, new c.func());
+  })
+}
+
+var setupCustomFunctions = function(env) {
+  var customFunctions = [ ...options.customFunctions ];
+  customFunctions.forEach(function(c) {
+    env.addGlobal(c.key, c.func);
+  })
+}
 
 /**
  * Assemble views using materials, data, and docs
@@ -450,6 +465,7 @@ var assemble = function () {
       pageMatter.data.module_path = filePath;
       pageMatter.data.module_source = pageContent;
       pageMatter.data.collection = collection;
+      pageMatter.data.module_data = { ...pageMatter.data };
 
       if (options.moduleAssemble) {
         pageMatter.data.assemble = options.moduleAssemble( { name: id, path: path.dirname(file) });
@@ -461,8 +477,8 @@ var assemble = function () {
 		}
 
 		var source = wrapPage(pageContent, innerContent);
-		var context = buildContext(pageMatter.data);
-
+    var context = buildContext(pageMatter.data);
+    
     try {
       var template = nunjucks.renderString(source, context);
     } catch (err) {
