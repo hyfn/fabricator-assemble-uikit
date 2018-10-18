@@ -453,7 +453,8 @@ var assemble = function () {
 
 		// get page gray matter and content
 		var pageMatter = getMatter(file),
-      pageContent = pageMatter.content;
+      pageContent = pageMatter.content,
+      context = {};
 
 		if (options.autoFabricator && file.match(options.autoFabricator)) {
       innerMatter = getMatter(options.moduleWrapper)
@@ -468,17 +469,21 @@ var assemble = function () {
       pageMatter.data.module_data = { ...pageMatter.data };
 
       if (options.moduleAssemble) {
-        pageMatter.data.assemble = options.moduleAssemble( { name: id, path: path.dirname(file) });
+        pageMatter.data.assemble = options.moduleAssemble({ 
+          name: id, 
+          path: path.dirname(file), 
+          context: pageMatter 
+        });
       }
 		}
 
 		if (collection) {
 			pageMatter.data.baseurl = '..';
-		}
-
-		var source = wrapPage(pageContent, innerContent);
-    var context = buildContext(pageMatter.data);
+    }
     
+    var source = wrapPage(pageContent, innerContent);
+    context = buildContext(pageMatter.data);
+
     try {
       var template = nunjucks.renderString(source, context);
     } catch (err) {
