@@ -433,7 +433,7 @@ var setupCustomFunctions = function(env) {
 /**
  * Assemble views using materials, data, and docs
  */
-var assemble = function () {
+var assemble = function (onComplete) {
 
 	// get files
   var files = globby.sync(options.views, { nodir: true });
@@ -442,85 +442,95 @@ var assemble = function () {
 	mkdirp.sync(options.dest);
 
 	// iterate over each view
-	files.forEach(function (file) {
-    var innerContent, innerMatter;
-    var id = getName(file);
+	const filePromises = files.map(function (file) {
+    return new Promise(async function(resolve, reject) {
+      var innerContent, innerMatter;
+      var id = getName(file);
 
-		// build filePath
-		var dirname = path.normalize(path.dirname(file)).split(path.sep).pop(),
-			collection = (dirname !== options.keys.views) ? dirname : '',
-			filePath = path.normalize(path.join(options.dest, collection, path.basename(file)));
+      // build filePath
+      var dirname = path.normalize(path.dirname(file)).split(path.sep).pop(),
+        collection = (dirname !== options.keys.views) ? dirname : '',
+        filePath = path.normalize(path.join(options.dest, collection, path.basename(file)));
 
-		// get page gray matter and content
-		var pageMatter = getMatter(file),
-      pageContent = pageMatter.content,
-      context = {};
+      // get page gray matter and content
+      var pageMatter = getMatter(file),
+        pageContent = pageMatter.content,
+        context = {};
 
-		if (options.autoFabricator && file.match(options.autoFabricator)) {
-      innerMatter = getMatter(options.moduleWrapper)
-      innerContent = innerMatter.content;
+      if (options.autoFabricator && file.match(options.autoFabricator)) {
+        innerMatter = getMatter(options.moduleWrapper)
+        innerContent = innerMatter.content;
 
-      pageMatter.data.fabricator = true;
-      pageMatter.data.module_name = id;
-      pageMatter.data.module_slug = id ? id.replace(/\s+/g, '-') : id;
-      pageMatter.data.module_path = filePath;
-      pageMatter.data.module_source = pageContent;
-      pageMatter.data.collection = collection;
-      pageMatter.data.module_data = { ...pageMatter.data };
+        pageMatter.data.fabricator = true;
+        pageMatter.data.module_name = id;
+        pageMatter.data.module_slug = id ? id.replace(/\s+/g, '-') : id;
+        pageMatter.data.module_path = filePath;
+        pageMatter.data.module_source = pageContent;
+        pageMatter.data.collection = collection;
+        pageMatter.data.module_data = { ...pageMatter.data };
 
-      if (options.moduleAssemble) {
-        pageMatter.data.assemble = options.moduleAssemble({ 
-          name: id, 
-          path: path.dirname(file), 
-          context: pageMatter 
-        });
+        if (options.moduleAssemble) {
+          pageMatter.data.assemble = await options.moduleAssemble({ 
+            name: id, 
+            path: path.dirname(file), 
+            context: pageMatter 
+          });
+        }
       }
-		}
 
-		if (collection) {
-			pageMatter.data.baseurl = '..';
-    }
-    
-    var source = wrapPage(pageContent, innerContent);
-    context = buildContext(pageMatter.data);
+      if (collection) {
+        pageMatter.data.baseurl = '..';
+      }
+      
+      var source = wrapPage(pageContent, innerContent);
+      context = buildContext(pageMatter.data);
 
-    try {
-      var template = nunjucks.renderString(source, context);
-    } catch (err) {
-      console.log(err)
-    }
+      try {
+        var template = nunjucks.renderString(source, context);
+      } catch (err) {
+        console.log(err)
+      }
 
-		// redefine file path if dest front-matter variable is defined
-		if (pageMatter.data.dest) {
-			filePath = path.normalize(pageMatter.data.dest);
-		}
+      // redefine file path if dest front-matter variable is defined
+      if (pageMatter.data.dest) {
+        filePath = path.normalize(pageMatter.data.dest);
+      }
 
-    if (options.destMap[collection]) {
-			filePath = path.normalize(path.join(options.destMap[collection], path.basename(file)));
-    }
+      if (options.destMap[collection]) {
+        filePath = path.normalize(path.join(options.destMap[collection], path.basename(file)));
+      }
 
-		// change extension to .html
-		filePath = filePath.replace(/\.[0-9a-z]+$/, options.extension);
+      // change extension to .html
+      filePath = filePath.replace(/\.[0-9a-z]+$/, options.extension);
 
-		// write file
-		mkdirp.sync(path.dirname(filePath));
-		try {
-			fs.writeFileSync(filePath, template);
-		} catch(e) {
-			const originFilePath = path.dirname(file) + '/' + path.basename(file);
+      // write file
+      mkdirp.sync(path.dirname(filePath));
+      
+      try {
+        fs.writeFileSync(filePath, template);
+      } catch(e) {
+        const originFilePath = path.dirname(file) + '/' + path.basename(file);
 
-			console.error('\x1b[31m \x1b[1mBold', 'Error while comiling template', originFilePath, '\x1b[0m \n')
-			throw e;
-		}
+        console.error('\x1b[31m \x1b[1mBold', 'Error while comiling template', originFilePath, '\x1b[0m \n')
+        throw e;
+      }
 
-		// write a copy file if custom dest-copy front-matter variable is defined
-		if (pageMatter.data['dest-copy']) {
-			var copyPath = path.normalize(pageMatter.data['dest-copy']);
-			mkdirp.sync(path.dirname(copyPath));
-			fs.writeFileSync(copyPath, template);
-		}
-	});
+      // write a copy file if custom dest-copy front-matter variable is defined
+      if (pageMatter.data['dest-copy']) {
+        var copyPath = path.normalize(pageMatter.data['dest-copy']);
+        mkdirp.sync(path.dirname(copyPath));
+        fs.writeFileSync(copyPath, template);
+      }
 
+      resolve()
+    })
+  });
+
+  Promise
+    .all(filePromises)
+    .then(function() {
+      if (onComplete) onComplete()
+    })
 };
 
 
@@ -536,7 +546,7 @@ module.exports = function (options) {
 		setup(options);
 
 		// assemble
-		assemble();
+		assemble(options.onComplete);
 
 	} catch(e) {
 		handleError(e);
