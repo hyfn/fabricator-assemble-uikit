@@ -636,7 +636,7 @@ var assemble = function () {
 		var pageMatter = getMatter(file),
       pageContent = pageMatter.content;
 
-		if (options.autoFabricator && file.match(options.autoFabricator)) {
+		if (options.autoFabricator && file.match(options.autoFabricator) && options.moduleWrapper) {
       innerMatter = getMatter(options.moduleWrapper)
       innerContent = innerMatter.content;
 
