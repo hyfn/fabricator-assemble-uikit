@@ -410,6 +410,7 @@ var setup = function (userOptions) {
   // setup steps
   setupCustomTags(env);
   setupCustomFunctions(env);
+  setupCustomFilters(env);
 	parseLayouts();
 	parseData();
 	parseViews();
@@ -417,16 +418,20 @@ var setup = function (userOptions) {
 };
 
 var setupCustomTags = function(env) {
-  var customTags = [ ...options.customTags ];
-  customTags.forEach(function(c) {
+  [ ...options.customTags ].forEach(function(c) {
     env.addExtension(c.key, new c.func());
   })
 }
 
 var setupCustomFunctions = function(env) {
-  var customFunctions = [ ...options.customFunctions ];
-  customFunctions.forEach(function(c) {
+  [ ...options.customFunctions ].forEach(function(c) {
     env.addGlobal(c.key, c.func);
+  })
+}
+
+var setupCustomFilters = function(env) {
+  [ ...options.customFilters ].forEach(function(c) {
+    env.addFilter(c.key, c.func);
   })
 }
 
