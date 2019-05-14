@@ -493,7 +493,12 @@ var assemble = function (onComplete) {
       try {
         var template = nunjucks.renderString(source, context);
       } catch (err) {
+
+        console.log('========================================')
+        console.log(`** ${file} **`)
+        console.log('========================================')
         console.log(err)
+        console.log('========================================')
       }
 
       // redefine file path if dest front-matter variable is defined
