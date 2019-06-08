@@ -491,7 +491,40 @@ var assemble = function (onComplete) {
       context = buildContext(pageMatter.data);
 
       try {
-        var template = nunjucks.renderString(source, context);
+         nunjucks.renderString(source, context, function(template) {
+            // redefine file path if dest front-matter variable is defined
+            if (pageMatter.data.dest) {
+              filePath = path.normalize(pageMatter.data.dest);
+            }
+
+            if (options.destMap[collection]) {
+              filePath = path.normalize(path.join(options.destMap[collection], path.basename(file)));
+            }
+
+            // change extension to .html
+            filePath = filePath.replace(/\.[0-9a-z]+$/, options.extension);
+
+            // write file
+            mkdirp.sync(path.dirname(filePath));
+            
+            try {
+              fs.writeFileSync(filePath, template);
+            } catch(e) {
+              const originFilePath = path.dirname(file) + '/' + path.basename(file);
+
+              console.error('\x1b[31m \x1b[1mBold', 'Error while comiling template', originFilePath, '\x1b[0m \n')
+              throw e;
+            }
+
+            // write a copy file if custom dest-copy front-matter variable is defined
+            if (pageMatter.data['dest-copy']) {
+              var copyPath = path.normalize(pageMatter.data['dest-copy']);
+              mkdirp.sync(path.dirname(copyPath));
+              fs.writeFileSync(copyPath, template);
+            }
+
+            resolve()
+        });
       } catch (err) {
 
         console.log('========================================')
@@ -500,39 +533,6 @@ var assemble = function (onComplete) {
         console.log(err)
         console.log('========================================')
       }
-
-      // redefine file path if dest front-matter variable is defined
-      if (pageMatter.data.dest) {
-        filePath = path.normalize(pageMatter.data.dest);
-      }
-
-      if (options.destMap[collection]) {
-        filePath = path.normalize(path.join(options.destMap[collection], path.basename(file)));
-      }
-
-      // change extension to .html
-      filePath = filePath.replace(/\.[0-9a-z]+$/, options.extension);
-
-      // write file
-      mkdirp.sync(path.dirname(filePath));
-      
-      try {
-        fs.writeFileSync(filePath, template);
-      } catch(e) {
-        const originFilePath = path.dirname(file) + '/' + path.basename(file);
-
-        console.error('\x1b[31m \x1b[1mBold', 'Error while comiling template', originFilePath, '\x1b[0m \n')
-        throw e;
-      }
-
-      // write a copy file if custom dest-copy front-matter variable is defined
-      if (pageMatter.data['dest-copy']) {
-        var copyPath = path.normalize(pageMatter.data['dest-copy']);
-        mkdirp.sync(path.dirname(copyPath));
-        fs.writeFileSync(copyPath, template);
-      }
-
-      resolve()
     })
   });
 
